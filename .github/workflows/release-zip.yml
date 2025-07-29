@@ -1,4 +1,4 @@
-name: Zip Changed Files and Release
+name: Zip All Files and Release
 
 on:
   push:
@@ -17,23 +17,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v46
+      - name: Generate Semantic Version
+        id: version
+        uses: paulhatch/semantic-version@v5.4.0
         with:
-          files: |
-            **
+          tag_prefix: ""
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          version_format: "${major}.${minor}.${patch}"
 
-      - name: Zip changed files
-        if: steps.changed-files.outputs.any_changed == 'true'
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+      - name: Zip all files
         run: |
-          mkdir -p changed_files
-          for file in $ALL_CHANGED_FILES; do
-            cp --parents "$file" changed_files/
-          done
-          zip -r Libertas-Billing-System.zip changed_files
+          zip -r Libertas-Billing-System.zip . -x ".git/*" ".github/*"
 
       - name: Create Release
         id: create_release
@@ -41,13 +36,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: release-${{ github.sha }}
-          release_name: Release ${{ github.sha }}
+          tag_name: ${{ steps.version.outputs.version_tag }}
+          release_name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
 
       - name: Upload ZIP to Release
-        if: steps.changed-files.outputs.any_changed == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
