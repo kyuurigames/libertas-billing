@@ -44,7 +44,7 @@ jobs:
           tag_name: release-${{ github.sha }}
           release_name: Release ${{ github.sha }}
           draft: false
-          prerelease: true
+          prerelease: false
 
       - name: Upload ZIP to Release
         if: steps.changed-files.outputs.any_changed == 'true'
