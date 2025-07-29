@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>請求書システム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'noto': ['Noto Sans JP', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        
+        .glass {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .bill-item {
+            transition: all 0.2s ease;
+        }
+        
+        .bill-item:hover {
+            transform: translateY(-1px);
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                max-height: 95vh;
+                margin: 0.5rem;
+            }
+            
+            .tab-pane {
+                padding: 1rem;
+            }
+            
+            .create-form-container {
+                max-width: 100%;
+            }
+        }
+        
+        #confirmDialog {
+            z-index: 9999 !important;
+        }
+        
+        #app {
+            z-index: 9998 !important;
+        }
+    </style>
+</head>
+<body class="font-noto antialiased">
+    <div id="app" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+        <div class="main-container bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden slide-in flex flex-col">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-receipt text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-white">請求書システム</h1>
+                        <p class="text-slate-300 text-sm" id="userName">ユーザー名</p>
+                    </div>
+                </div>
+                <button onclick="closeBilling()" class="w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all duration-200">
+                    <i class="fas fa-times text-white"></i>
+                </button>
+            </div>
+            <div class="bg-gray-50 border-b border-gray-200">
+                <nav class="flex">
+                    <button class="tab-btn flex-1 px-6 py-4 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200" data-tab="bills">
+                        <i class="fas fa-list mr-2"></i>
+                        請求書一覧
+                    </button>
+                    <button class="tab-btn flex-1 px-6 py-4 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200" data-tab="create">
+                        <i class="fas fa-plus mr-2"></i>
+                        請求書作成
+                    </button>
+                    <button class="tab-btn police-only flex-1 px-6 py-4 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-b-2 border-transparent hover:border-gray-300 transition-all duration-200" data-tab="police" style="display: none;">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        未払い確認
+                    </button>
+                </nav>
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <div id="bills-tab" class="tab-pane h-full p-6 overflow-y-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">請求書一覧</h2>
+                        <div class="flex items-center space-x-3">
+                            <select id="statusFilter" onchange="filterBills()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="all">すべて</option>
+                                <option value="unpaid">未払い</option>
+                                <option value="paid">支払い済み</option>
+                                <option value="sent">送信済み</option>
+                                <option value="received">受信済み</option>
+                            </select>
+                            <button onclick="refreshBills()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                更新
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="billsList" class="space-y-3">
+                    </div>
+                </div>
+                <div id="create-tab" class="tab-pane h-full p-6 overflow-y-auto" style="display: none;">
+                    <div class="create-form-container max-w-2xl mx-auto h-full">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-6">新しい請求書を作成</h2>
+                        
+                        <div class="space-y-6 pb-8">
+                            <div>
+                                <label for="targetPlayer" class="block text-sm font-medium text-gray-700 mb-2">宛先プレイヤー</label>
+                                <select id="targetPlayer" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">プレイヤーを選択してください</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">5メートル以内のプレイヤーのみ表示されます</p>
+                            </div>
+                            
+                            <div>
+                                <label for="billAmount" class="block text-sm font-medium text-gray-700 mb-2">金額 (円)</label>
+                                <input type="number" id="billAmount" min="1" max="1000000" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="例: 10000">
+                                <p class="text-xs text-gray-500 mt-1">1円から1,000,000円まで</p>
+                            </div>
+                            
+                            <div>
+                                <label for="billReason" class="block text-sm font-medium text-gray-700 mb-2">理由</label>
+                                <textarea id="billReason" rows="4" maxlength="500" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="請求理由を入力してください..."></textarea>
+                                <p class="text-xs text-gray-500 mt-1">最大500文字</p>
+                            </div>
+                            
+                            <button onclick="createBill()" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02]">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                請求書を送信
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="police-tab" class="tab-pane h-full p-6 overflow-y-auto" style="display: none;">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">近くのプレイヤー確認</h2>
+                        <button onclick="refreshNearbyPlayers()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                            <i class="fas fa-sync-alt mr-2"></i>
+                            更新
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-info-circle text-blue-600 mr-3"></i>
+                                <div>
+                                    <h3 class="text-sm font-medium text-blue-900">使用方法</h3>
+                                    <p class="text-sm text-blue-700">近くのプレイヤーを選択して、その人の未払い請求書を確認できます。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="nearbyPlayersList" class="space-y-3 max-h-64 overflow-y-auto scrollbar-thin mb-6">
+                    </div>
+                    
+                    <div id="selectedPlayerBills" class="space-y-3 max-h-40 overflow-y-auto scrollbar-thin" style="display: none;">
+                        <h3 class="text-md font-semibold text-gray-900 mb-3">選択されたプレイヤーの請求書</h3>
+                        <div id="playerBillsList">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div id="confirmDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md slide-in">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-question-circle text-blue-600"></i>
+                    </div>
+                    <h3 id="confirmTitle" class="text-lg font-semibold text-gray-900">確認</h3>
+                </div>
+                <p id="confirmMessage" class="text-gray-600 mb-6"></p>
+                <div class="flex space-x-3">
+                    <button onclick="closeConfirmDialog()" class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200">
+                        キャンセル
+                    </button>
+                    <button onclick="confirmAction()" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200">
+                        確認
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
