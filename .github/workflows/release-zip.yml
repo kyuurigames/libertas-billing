@@ -2,8 +2,8 @@ name: Zip Changed Files and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
   build-and-release:
@@ -38,10 +38,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          tag_name: release-${{ github.sha }}
+          release_name: Release ${{ format('{0}', github.sha) }}
           draft: false
-          prerelease: false
+          prerelease: true
 
       - name: Upload ZIP to Release
         if: steps.changed-files.outputs.any_changed == 'true'
