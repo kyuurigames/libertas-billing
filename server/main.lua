@@ -400,7 +400,7 @@ RegisterNetEvent('billing:server:checkPlayerBills', function(targetId)
         TriggerClientEvent('billing:client:playerBillsInfo', src, targetName, formattedBills)
     end)
 end)
-¥
+
 CreateThread(function()
     while true do
         Wait(Config.OverdueNotificationInterval * 60 * 1000)
